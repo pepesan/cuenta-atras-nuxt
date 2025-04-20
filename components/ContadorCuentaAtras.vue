@@ -21,7 +21,7 @@ let intervalo
 
 const cargarCuentaAtras = async () => {
   try {
-    const respuesta = await $fetch('/api/ejemplo')
+    const respuesta = await $fetch('/api/contador')
     minutos.value = respuesta.minutos
     segundos.value = respuesta.segundos
     colorFondo.value = respuesta.color
