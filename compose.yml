@@ -1,6 +1,7 @@
 services:
   countdown:
     image: docker.io/pepesan/cuenta-atras:latest
+    restart: always
     container_name: cuenta-atras
     ports:
       - "3000:3000"
