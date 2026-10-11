@@ -1,28 +1,29 @@
-ARG NODE_VERSION=22.14.0
+ARG NODE_VERSION=26.11.1
 
-ARG PORT=3000
-
-FROM node:${NODE_VERSION}-slim as base
-
+# Base
+FROM node:${NODE_VERSION}-slim AS base
 WORKDIR /src
 
-# Build
-FROM base as build
+# Build: instala con pnpm y el lockfile exacto (reproducible)
+FROM base AS build
+RUN npm install -g pnpm@10.8.1
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
 
-COPY --link package.json  .
+# Run: Chainguard (Wolfi, sin shell ni npm/yarn), usuario no-root
+FROM cgr.dev/chainguard/node:latest
+WORKDIR /src
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
 
-RUN npm install
+COPY --from=build --chown=node:node /src/.output /src/.output
 
-COPY --link . .
+EXPOSE 3000
 
-RUN npm run build
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["/usr/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/contador').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
-# Run
-FROM base
-
-ENV PORT=$PORT
-ENV NODE_ENV=production
-
-COPY --from=build /src/.output /src/.output
-
-CMD [ "node", ".output/server/index.mjs" ]
+CMD [".output/server/index.mjs"]
